@@ -1,11 +1,14 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from './Navbar';
-
+import GlobalSyncBar from '../common/GlobalSyncBar';
+import SyncConsentDialog from '../common/SyncConsentDialog';
 const DashboardLayout = ({ children }) => {
     return (
-        <div className="min-h-screen bg-[#f8fafc]">
+        <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 transition-colors duration-300">
             <Navbar />
+            <GlobalSyncBar />
+            <SyncConsentDialog />
 
             <AnimatePresence mode="wait">
                 <motion.main

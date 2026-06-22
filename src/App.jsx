@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
-
+import { NetworkProvider } from './context/NetworkContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
@@ -23,6 +23,9 @@ import AttendanceSheet from './components/AttendanceSheet';
 import AttendanceReport from './components/Reports/AttendanceReport';
 import ProfilePage from './pages/ProfilePage';
 
+// Initialize offline sync listeners
+import './utils/offlineSync';
+
 /* -----------------------------
    Role-based Dashboard Redirect
 -------------------------------- */
@@ -37,10 +40,10 @@ const DashboardRedirect = () => {
   }
 
   const roleRoutes = {
-    SUPER_ADMIN: '/admin/dashboard',
+    ADMIN: '/admin/dashboard',
     DISTRICT_ADMIN: '/admin/dashboard',
     BLOCK_ADMIN: '/admin/dashboard',
-    SCHOOL_ADMIN: '/school/dashboard',
+    SCHOOL: '/school/dashboard',
     TEACHER: '/teacher/dashboard',
     STUDENT: '/student/dashboard',
     PARENT: '/student/dashboard',
@@ -57,8 +60,9 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Router>
-          <Routes>
+        <NetworkProvider>
+          <Router>
+            <Routes>
 
             {/* ---------- Public Routes ---------- */}
             <Route path="/" element={<Login />} />
@@ -81,7 +85,7 @@ function App() {
             <Route
               path="/school/dashboard"
               element={
-                <ProtectedRoute requiredRole="SCHOOL_ADMIN">
+                <ProtectedRoute requiredRole="SCHOOL">
                   <SchoolAdminDashboard />
                 </ProtectedRoute>
               }
@@ -90,7 +94,7 @@ function App() {
             <Route
               path="/school/management"
               element={
-                <ProtectedRoute allowedRoles={['SCHOOL_ADMIN', 'SUPER_ADMIN', 'DISTRICT_ADMIN', 'BLOCK_ADMIN']}>
+                <ProtectedRoute allowedRoles={['SCHOOL', 'ADMIN', 'DISTRICT_ADMIN', 'BLOCK_ADMIN']}>
                   <Management />
                 </ProtectedRoute>
               }
@@ -99,7 +103,7 @@ function App() {
             <Route
               path="/admin/management"
               element={
-                <ProtectedRoute allowedRoles={['SCHOOL_ADMIN', 'SUPER_ADMIN', 'DISTRICT_ADMIN', 'BLOCK_ADMIN']}>
+                <ProtectedRoute allowedRoles={['SCHOOL', 'ADMIN', 'DISTRICT_ADMIN', 'BLOCK_ADMIN']}>
                   <Management />
                 </ProtectedRoute>
               }
@@ -131,10 +135,10 @@ function App() {
               element={
                 <ProtectedRoute
                   allowedRoles={[
-                    'SUPER_ADMIN',
+                    'ADMIN',
                     'DISTRICT_ADMIN',
                     'BLOCK_ADMIN',
-                    'SCHOOL_ADMIN',
+                    'SCHOOL',
                   ]}
                 >
                   <AdminReports />
@@ -183,7 +187,8 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
 
           </Routes>
-        </Router>
+          </Router>
+        </NetworkProvider>
       </ToastProvider>
     </AuthProvider>
   );

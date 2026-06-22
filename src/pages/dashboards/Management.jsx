@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { studentAPI, teacherAPI, dashboardAPI } from '../../api';
+import { studentAPI, teacherAPI, dashboardAPI, geographyAPI, studentRequestAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import DashboardLayout from '../../components/layout/DashboardLayout';
@@ -16,7 +16,7 @@ const Management = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
     const toast = useToast();
-    const [activeTab, setActiveTab] = useState('STUDENTS'); // 'STUDENTS' or 'TEACHERS'
+    const [activeTab, setActiveTab] = useState('STUDENTS'); // 'STUDENTS', 'TEACHERS', or 'SCHOOLS'
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -32,12 +32,19 @@ const Management = () => {
         setLoading(true);
         try {
             const schoolId = user?.school?.id;
-            if (!schoolId) return;
+            // For SCHOOLS tab, we might not need a schoolId, or it might be for super admin
+            // If schoolId is required for STUDENTS/TEACHERS and not present, return.
+            // For SCHOOLS, we fetch all schools.
+            if (activeTab !== 'SCHOOLS' && !schoolId) return;
 
-            const response = activeTab === 'STUDENTS'
-                ? await studentAPI.getBySchool(schoolId)
-                : await teacherAPI.getBySchool(schoolId);
-
+            let response;
+            if (activeTab === 'STUDENTS') {
+                response = await studentAPI.getBySchool(schoolId);
+            } else if (activeTab === 'TEACHERS') {
+                response = await teacherAPI.getBySchool(schoolId);
+            } else {
+                response = await geographyAPI.getSchools();
+            }
             setData(response.data);
         } catch (error) {
             console.error(`Error loading ${activeTab.toLowerCase()}:`, error);
@@ -51,7 +58,9 @@ const Management = () => {
         if (!window.confirm(`Are you sure you want to permanently delete this ${activeTab.slice(0, -1).toLowerCase()}?`)) return;
 
         try {
-            activeTab === 'STUDENTS' ? await studentAPI.delete(id) : await teacherAPI.delete(id);
+            if (activeTab === 'STUDENTS') await studentAPI.delete(id);
+            else if (activeTab === 'TEACHERS') await teacherAPI.delete(id);
+            else if (activeTab === 'SCHOOLS') await geographyAPI.deleteSchool(id);
             toast.success('Record purged successfully');
             loadData();
         } catch (error) {
@@ -69,15 +78,15 @@ const Management = () => {
         e.preventDefault();
         try {
             if (editingItem) {
-                activeTab === 'STUDENTS'
-                    ? await studentAPI.update(editingItem.id, formData)
-                    : await teacherAPI.update(editingItem.id, formData);
+                if (activeTab === 'STUDENTS') await studentAPI.update(editingItem.id, formData);
+                else if (activeTab === 'TEACHERS') await teacherAPI.update(editingItem.id, formData);
+                else if (activeTab === 'SCHOOLS') await geographyAPI.updateSchool(editingItem.id, formData);
                 toast.success('Identity record updated');
             } else {
-                const payload = { ...formData, school: { id: user.school.id } };
-                activeTab === 'STUDENTS'
-                    ? await studentAPI.create(payload)
-                    : await teacherAPI.create(payload);
+                const payload = activeTab === 'SCHOOLS' ? formData : { ...formData, school: { id: user.school.id } };
+                if (activeTab === 'STUDENTS') await studentAPI.create(payload);
+                else if (activeTab === 'TEACHERS') await teacherAPI.create(payload);
+                else if (activeTab === 'SCHOOLS') await geographyAPI.createSchool(payload);
                 toast.success('New profile created');
             }
             setIsModalOpen(false);
@@ -89,7 +98,7 @@ const Management = () => {
 
     const filteredData = data.filter(item =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.rollNumber || item.employeeId || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (item.rollNumber || item.employeeId || item.schoolCode || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const containerVariants = {
@@ -114,30 +123,44 @@ const Management = () => {
                         </h1>
                         <p className="text-slate-500 font-medium mt-2">Manage verified credentials for your institution's stakeholders.</p>
                     </div>
-                    <button
-                        onClick={() => { setEditingItem(null); setFormData({}); setIsModalOpen(true); }}
-                        className="premium-button bg-indigo-600 text-white flex items-center gap-2 px-8 py-4 rounded-2xl shadow-lg shadow-indigo-200"
-                    >
-                        <UserPlus className="w-5 h-5" />
-                        Add New {activeTab === 'STUDENTS' ? 'Student' : 'Teacher'}
-                    </button>
+                    {activeTab !== 'SCHOOLS' && (
+                        <button
+                            onClick={() => { setEditingItem(null); setFormData({}); setIsModalOpen(true); }}
+                            className="premium-button bg-indigo-600 text-white flex items-center gap-2 px-8 py-4 rounded-2xl shadow-lg shadow-indigo-200"
+                        >
+                            <UserPlus className="w-5 h-5" />
+                            Add New {activeTab === 'STUDENTS' ? 'Student' : 'Teacher'}
+                        </button>
+                    )}
+                    {activeTab === 'SCHOOLS' && ['ADMIN'].includes(user?.role) && (
+                        <button
+                            onClick={() => { setEditingItem(null); setFormData({}); setIsModalOpen(true); }}
+                            className="premium-button bg-indigo-600 text-white flex items-center gap-2 px-8 py-4 rounded-2xl shadow-lg shadow-indigo-200"
+                        >
+                            <UserPlus className="w-5 h-5" />
+                            Add New School
+                        </button>
+                    )}
                 </div>
 
                 {/* Tabs & Search */}
                 <div className="flex flex-col md:flex-row gap-6 items-center justify-between">
                     <div className="bg-slate-100 p-1.5 rounded-2xl flex gap-1 self-start">
-                        {['STUDENTS', 'TEACHERS'].map(tab => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={`px-8 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === tab
-                                    ? 'bg-white text-indigo-600 shadow-sm'
-                                    : 'text-slate-500 hover:text-slate-700'
-                                    }`}
-                            >
-                                {tab}
-                            </button>
-                        ))}
+                        {['STUDENTS', 'TEACHERS', 'SCHOOLS'].map(tab => {
+                            if (tab === 'SCHOOLS' && !['ADMIN'].includes(user?.role)) return null;
+                            return (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`px-8 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === tab
+                                        ? 'bg-white text-indigo-600 shadow-sm'
+                                        : 'text-slate-500 hover:text-slate-700'
+                                        }`}
+                                >
+                                    {tab}
+                                </button>
+                            );
+                        })}
                     </div>
 
                     <div className="relative w-full md:w-96 group">
@@ -166,9 +189,9 @@ const Management = () => {
                             <table className="w-full text-left">
                                 <thead>
                                     <tr className="bg-slate-50/50 border-b border-slate-100">
-                                        <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Stakeholder</th>
-                                        <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-widest">Identification</th>
-                                        <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-widest">{activeTab === 'STUDENTS' ? 'Grading' : 'Department'}</th>
+                                        <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-widest">{activeTab === 'SCHOOLS' ? 'Institution' : 'Stakeholder'}</th>
+                                        <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-widest">{activeTab === 'SCHOOLS' ? 'School Code' : 'Identification'}</th>
+                                        <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-widest">{activeTab === 'SCHOOLS' ? 'Address' : (activeTab === 'STUDENTS' ? 'Grading' : 'Department')}</th>
                                         <th className="px-8 py-6 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Operations</th>
                                     </tr>
                                 </thead>
@@ -181,20 +204,26 @@ const Management = () => {
                                         >
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg cursor-pointer hover:scale-110 transition-transform ${activeTab === 'STUDENTS' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
+                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg cursor-pointer hover:scale-110 transition-transform ${activeTab === 'STUDENTS' ? 'bg-blue-50 text-blue-600' : activeTab === 'TEACHERS' ? 'bg-purple-50 text-purple-600' : 'bg-emerald-50 text-emerald-600'
                                                         }`}
-                                                        onClick={() => navigate(`/profile/${activeTab === 'STUDENTS' ? 'student' : 'teacher'}/${item.id}`)}
+                                                        onClick={() => activeTab !== 'SCHOOLS' && navigate(`/profile/${activeTab === 'STUDENTS' ? 'student' : 'teacher'}/${item.id}`)}
                                                     >
                                                         {item.name.charAt(0)}
                                                     </div>
                                                     <div
-                                                        onClick={() => navigate(`/profile/${activeTab === 'STUDENTS' ? 'student' : 'teacher'}/${item.id}`)}
-                                                        className="cursor-pointer"
+                                                        onClick={() => activeTab !== 'SCHOOLS' && navigate(`/profile/${activeTab === 'STUDENTS' ? 'student' : 'teacher'}/${item.id}`)}
+                                                        className={activeTab !== 'SCHOOLS' ? "cursor-pointer" : ""}
                                                     >
                                                         <div className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{item.name}</div>
                                                         <div className="text-xs font-medium text-slate-400 flex items-center gap-1.5 mt-1">
-                                                            <Mail className="w-3.5 h-3.5" />
-                                                            {item.email || 'No email attached'}
+                                                            {activeTab === 'SCHOOLS' ? (
+                                                                <>Year: {item.academicYear || 'N/A'}</>
+                                                            ) : (
+                                                                <>
+                                                                    <Mail className="w-3.5 h-3.5" />
+                                                                    {item.email || 'No email attached'}
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -202,7 +231,7 @@ const Management = () => {
                                             <td className="px-8 py-6">
                                                 <div className="bg-slate-100 text-slate-600 px-3 py-1.5 rounded-xl text-xs font-black inline-flex items-center gap-2">
                                                     <Hash className="w-3 h-3 opacity-50" />
-                                                    {item.rollNumber || item.employeeId || 'PENDING'}
+                                                    {item.rollNumber || item.employeeId || item.schoolCode || 'PENDING'}
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
@@ -216,9 +245,13 @@ const Management = () => {
                                                                 {item.section}
                                                             </span>
                                                         </>
-                                                    ) : (
+                                                    ) : activeTab === 'TEACHERS' ? (
                                                         <span className="px-4 py-1.5 bg-purple-50 text-purple-600 rounded-xl text-xs font-black border border-purple-100 uppercase tracking-wider">
                                                             {item.subject || 'GENERAL'}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs font-medium text-slate-500 truncate max-w-[200px]" title={item.address}>
+                                                            {item.address}
                                                         </span>
                                                     )}
                                                 </div>
@@ -304,53 +337,90 @@ const Management = () => {
                                     </div>
                                 )}
 
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
-                                        {activeTab === 'STUDENTS' ? 'Current Class' : 'Specialization'}
-                                    </label>
-                                    <input
-                                        required
-                                        className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
-                                        value={activeTab === 'STUDENTS' ? formData.className || '' : formData.subject || ''}
-                                        onChange={e => activeTab === 'STUDENTS' ? setFormData({ ...formData, className: e.target.value }) : setFormData({ ...formData, subject: e.target.value })}
-                                        placeholder={activeTab === 'STUDENTS' ? "e.g. 10" : "e.g. Mathematics"}
-                                    />
-                                </div>
+                                {activeTab === 'SCHOOLS' ? (
+                                    <>
+                                        <div className="space-y-2 col-span-2">
+                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Institutional Address</label>
+                                            <input
+                                                required
+                                                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
+                                                value={formData.address || ''}
+                                                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                                placeholder="Enter full address..."
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">School Code</label>
+                                            <input
+                                                required
+                                                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
+                                                value={formData.schoolCode || ''}
+                                                onChange={e => setFormData({ ...formData, schoolCode: e.target.value })}
+                                                placeholder="e.g. SCH-001"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Academic Year</label>
+                                            <input
+                                                required
+                                                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
+                                                value={formData.academicYear || ''}
+                                                onChange={e => setFormData({ ...formData, academicYear: e.target.value })}
+                                                placeholder="e.g. 2024-25"
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
+                                                {activeTab === 'STUDENTS' ? 'Current Class' : 'Specialization'}
+                                            </label>
+                                            <input
+                                                required
+                                                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
+                                                value={activeTab === 'STUDENTS' ? formData.className || '' : formData.subject || ''}
+                                                onChange={e => activeTab === 'STUDENTS' ? setFormData({ ...formData, className: e.target.value }) : setFormData({ ...formData, subject: e.target.value })}
+                                                placeholder={activeTab === 'STUDENTS' ? "e.g. 10" : "e.g. Mathematics"}
+                                            />
+                                        </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
-                                        {activeTab === 'STUDENTS' ? 'Roll Code' : 'Staff Identifier'}
-                                    </label>
-                                    <input
-                                        required
-                                        className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
-                                        value={activeTab === 'STUDENTS' ? formData.rollNumber || '' : formData.employeeId || ''}
-                                        onChange={e => activeTab === 'STUDENTS' ? setFormData({ ...formData, rollNumber: e.target.value }) : setFormData({ ...formData, employeeId: e.target.value })}
-                                        placeholder="Enter unique ID..."
-                                    />
-                                </div>
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">
+                                                {activeTab === 'STUDENTS' ? 'Roll Code' : 'Staff Identifier'}
+                                            </label>
+                                            <input
+                                                required
+                                                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
+                                                value={activeTab === 'STUDENTS' ? formData.rollNumber || '' : formData.employeeId || ''}
+                                                onChange={e => activeTab === 'STUDENTS' ? setFormData({ ...formData, rollNumber: e.target.value }) : setFormData({ ...formData, employeeId: e.target.value })}
+                                                placeholder="Enter unique ID..."
+                                            />
+                                        </div>
 
-                                {activeTab === 'STUDENTS' && (
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Section</label>
-                                        <input
-                                            className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
-                                            value={formData.section || ''}
-                                            onChange={e => setFormData({ ...formData, section: e.target.value })}
-                                            placeholder="e.g. A"
-                                        />
-                                    </div>
+                                        {activeTab === 'STUDENTS' && (
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Section</label>
+                                                <input
+                                                    className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
+                                                    value={formData.section || ''}
+                                                    onChange={e => setFormData({ ...formData, section: e.target.value })}
+                                                    placeholder="e.g. A"
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2">
+                                            <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Contact Protocol</label>
+                                            <input
+                                                className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
+                                                value={activeTab === 'STUDENTS' ? formData.parentPhone || '' : formData.phoneNumber || ''}
+                                                onChange={e => activeTab === 'STUDENTS' ? setFormData({ ...formData, parentPhone: e.target.value }) : setFormData({ ...formData, phoneNumber: e.target.value })}
+                                                placeholder="+1 234..."
+                                            />
+                                        </div>
+                                    </>
                                 )}
-
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">Contact Protocol</label>
-                                    <input
-                                        className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-indigo-500/10 outline-none font-bold"
-                                        value={activeTab === 'STUDENTS' ? formData.parentPhone || '' : formData.phoneNumber || ''}
-                                        onChange={e => activeTab === 'STUDENTS' ? setFormData({ ...formData, parentPhone: e.target.value }) : setFormData({ ...formData, phoneNumber: e.target.value })}
-                                        placeholder="+1 234..."
-                                    />
-                                </div>
 
                                 <div className="col-span-2 pt-6 flex gap-4">
                                     <button

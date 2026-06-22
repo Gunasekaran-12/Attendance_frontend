@@ -51,7 +51,7 @@ const AdminDashboard = () => {
 
     const getAdminTitle = () => {
         switch (user?.role) {
-            case 'SUPER_ADMIN':
+            case 'ADMIN':
                 return 'Super Admin Dashboard';
             case 'DISTRICT_ADMIN':
                 return 'District Admin Dashboard';
@@ -64,7 +64,7 @@ const AdminDashboard = () => {
 
     const getAdminScope = () => {
         switch (user?.role) {
-            case 'SUPER_ADMIN':
+            case 'ADMIN':
                 return 'National Overview';
             case 'DISTRICT_ADMIN':
                 return `District: ${user?.district?.name || 'N/A'}`;
@@ -78,28 +78,30 @@ const AdminDashboard = () => {
     return (
         <DashboardLayout>
             {/* Header */}
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800">{getAdminTitle()}</h1>
-                <p className="text-gray-600 mt-1">{getAdminScope()}</p>
+            <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">{getAdminTitle()}</h1>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">{getAdminScope()}</p>
+                </div>
             </div>
 
             {isAdmin() && (
                 <div className="mb-8">
-                    <h2 className="text-lg font-bold text-gray-700 mb-4">Quick Actions</h2>
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-1 mb-4">Institutional Tools</h2>
                     <div className="flex flex-wrap gap-4">
                         <Link
                             to="/admin/reports"
-                            className="inline-flex items-center gap-3 px-6 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                            className="inline-flex items-center gap-3 px-8 py-4.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-sm transition-all shadow-lg shadow-indigo-500/20 active:scale-98"
                         >
                             <BarChart2 className="w-5 h-5" />
                             Admin Reports
                         </Link>
                         <Link
                             to="/admin/management"
-                            className="inline-flex items-center gap-3 px-6 py-4 bg-white text-indigo-600 rounded-2xl font-bold text-sm hover:bg-indigo-50 transition-all shadow-md border border-indigo-100"
+                            className="inline-flex items-center gap-3 px-8 py-4.5 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-slate-700 rounded-2xl font-bold text-sm hover:bg-indigo-50 dark:hover:bg-slate-700/50 transition-all shadow-md active:scale-98"
                         >
                             <Users className="w-5 h-5" />
-                            Manage Students &amp; Teachers
+                            Manage Institutional Directory
                         </Link>
                     </div>
                 </div>
@@ -107,54 +109,54 @@ const AdminDashboard = () => {
 
 
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-                    <div className="text-sm text-gray-600 mb-1">Total States</div>
-                    <div className="text-3xl font-bold text-gray-800">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                <div className="dashboard-widget border-l-4 border-l-indigo-500">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total States</div>
+                    <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                         {hierarchy?.states?.length || 0}
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
-                    <div className="text-sm text-gray-600 mb-1">Total Districts</div>
-                    <div className="text-3xl font-bold text-gray-800">
+                <div className="dashboard-widget border-l-4 border-l-emerald-500">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Districts</div>
+                    <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                         {hierarchy?.districts?.length || 0}
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
-                    <div className="text-sm text-gray-600 mb-1">Total Blocks</div>
-                    <div className="text-3xl font-bold text-gray-800">
+                <div className="dashboard-widget border-l-4 border-l-amber-500">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Blocks</div>
+                    <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                         {hierarchy?.blocks?.length || 0}
                     </div>
                 </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
-                    <div className="text-sm text-gray-600 mb-1">Total Schools</div>
-                    <div className="text-3xl font-bold text-gray-800">
+                <div className="dashboard-widget border-l-4 border-l-purple-500">
+                    <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Schools</div>
+                    <div className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                         {schools.length || 0}
                     </div>
                 </div>
             </div>
 
             {/* Geographic Hierarchy */}
-            <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">Geographic Hierarchy</h2>
+            <div className="dashboard-widget mb-8">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Geographic Hierarchy</h2>
                 <div className="space-y-4">
                     {hierarchy?.states?.map((state) => (
-                        <div key={state.id} className="border rounded-lg p-4">
-                            <div className="font-semibold text-lg text-gray-800">{state.name}</div>
-                            <div className="ml-4 mt-2 space-y-2">
+                        <div key={state.id} className="border border-slate-100 dark:border-slate-800 rounded-3xl p-6 bg-slate-50/50 dark:bg-slate-900/20">
+                            <div className="font-extrabold text-lg text-slate-800 dark:text-slate-200 tracking-tight">{state.name}</div>
+                            <div className="ml-4 mt-4 space-y-4">
                                 {hierarchy?.districts
                                     ?.filter((d) => d.state?.id === state.id)
                                     .map((district) => (
-                                        <div key={district.id} className="border-l-2 border-blue-300 pl-4">
-                                            <div className="font-medium text-gray-700">{district.name}</div>
-                                            <div className="ml-4 mt-1 space-y-1">
+                                        <div key={district.id} className="border-l-2 border-indigo-200 dark:border-indigo-900/60 pl-4">
+                                            <div className="font-bold text-slate-700 dark:text-slate-300">{district.name}</div>
+                                            <div className="ml-4 mt-2 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                                 {hierarchy?.blocks
                                                     ?.filter((b) => b.district?.id === district.id)
                                                     .map((block) => (
-                                                        <div key={block.id} className="text-sm text-gray-600">
+                                                        <div key={block.id} className="text-sm font-semibold text-slate-550 dark:text-slate-400 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 px-3.5 py-2 rounded-xl shadow-sm">
                                                             • {block.name}
                                                         </div>
                                                     ))}
@@ -168,33 +170,33 @@ const AdminDashboard = () => {
             </div>
 
             {/* School Comparison Table */}
-            <div className="bg-white p-6 rounded-lg shadow-md">
-                <h2 className="text-xl font-bold text-gray-800 mb-4">School Performance</h2>
+            <div className="dashboard-widget">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">School Performance Summary</h2>
                 {schools.length === 0 ? (
-                    <div className="text-center py-12 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                        <p className="text-gray-400">No schools found or data not synchronised.</p>
+                    <div className="text-center py-20 bg-slate-50 dark:bg-slate-900/25 rounded-[2.5rem] border border-dashed border-slate-200 dark:border-slate-800">
+                        <p className="text-slate-400 font-medium">No schools found or data not synchronised.</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left">
                             <thead>
-                                <tr className="text-gray-400 text-xs font-bold uppercase tracking-widest border-b border-gray-100">
-                                    <th className="pb-4">School Name</th>
-                                    <th className="pb-4">Total Students</th>
-                                    <th className="pb-4">Present Today</th>
-                                    <th className="pb-4">Percentage</th>
+                                <tr className="text-slate-400 dark:text-slate-500 text-xs font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800">
+                                    <th className="pb-5 pl-4">School Name</th>
+                                    <th className="pb-5">Total Students</th>
+                                    <th className="pb-5">Present Today</th>
+                                    <th className="pb-5 pr-4">Percentage</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-50">
+                            <tbody className="divide-y divide-slate-50 dark:divide-slate-800/40">
                                 {schools.map((school, index) => (
-                                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                                        <td className="py-4 font-semibold text-gray-700">{school.schoolName}</td>
-                                        <td className="py-4 text-gray-600">{school.summary?.totalStudents}</td>
-                                        <td className="py-4 text-gray-600">{school.summary?.present}</td>
-                                        <td className="py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${school.summary?.percentage >= 90 ? 'bg-green-100 text-green-700' :
-                                                school.summary?.percentage >= 75 ? 'bg-yellow-100 text-yellow-700' :
-                                                    'bg-red-100 text-red-700'
+                                    <tr key={index} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all group">
+                                        <td className="py-5 pl-4 font-bold text-slate-700 dark:text-slate-200">{school.schoolName}</td>
+                                        <td className="py-5 font-semibold text-slate-500 dark:text-slate-400">{school.summary?.totalStudents}</td>
+                                        <td className="py-5 font-semibold text-slate-500 dark:text-slate-400">{school.summary?.present}</td>
+                                        <td className="py-5 pr-4">
+                                            <span className={`inline-block px-3 py-1 rounded-xl text-xs font-bold ${school.summary?.percentage >= 90 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                                school.summary?.percentage >= 75 ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                                                    'bg-rose-50 text-rose-600 border border-rose-100'
                                                 }`}>
                                                 {school.summary?.percentage?.toFixed(1)}%
                                             </span>

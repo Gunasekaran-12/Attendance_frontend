@@ -23,7 +23,10 @@ export const geographyAPI = {
 
     // Hierarchy
     getHierarchy: () => apiClient.get('/geography/hierarchy'),
-    getSchools: () => apiClient.get('/schools'),
+    getSchools: () => apiClient.get('schools'),
+    createSchool: (data) => apiClient.post('/schools', data),
+    updateSchool: (id, data) => apiClient.put(`/schools/${id}`, data),
+    deleteSchool: (id) => apiClient.delete(`/schools/${id}`),
 };
 
 export default geographyAPI;

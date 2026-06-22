@@ -26,6 +26,39 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
+      },
+      workbox: {
+        runtimeCaching: [
+          {
+            urlPattern: /^http:\/\/localhost:8080\/api\/(students|classes).*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'roster-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 24 * 60 * 60 // 1 day
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /^http:\/\/localhost:8080\/api\/dashboard.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'dashboard-cache',
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 24 * 60 * 60 // 1 day
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
       }
     })
   ],

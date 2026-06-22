@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+/* Tailwind v4: Enable class-based dark mode (replaces darkMode:'class' from config) */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
@@ -25,9 +27,18 @@
   --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 }
 
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --primary-light: #1e1b4b;
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+}
+
 @layer base {
   body {
-    @apply antialiased bg-[#fdfdfd] text-[#1e293b];
+    @apply antialiased bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 
@@ -37,14 +48,14 @@
   h4,
   h5,
   h6 {
-    @apply font-semibold tracking-tight;
+    @apply font-semibold tracking-tight text-slate-900 dark:text-white transition-colors duration-300;
     font-family: 'Outfit', sans-serif;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-white/70 backdrop-blur-lg border border-white/20 shadow-xl;
+    @apply bg-white/70 dark:bg-slate-900/75 backdrop-blur-lg border border-white/20 dark:border-white/5 shadow-xl text-slate-800 dark:text-slate-200 transition-colors duration-300;
   }
 
   .glass-morphism {
@@ -59,7 +70,7 @@
   }
 
   .dashboard-widget {
-    @apply bg-white rounded-3xl p-6 border border-slate-100 transition-all duration-500;
+    @apply bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-100 dark:border-slate-800/80 transition-all duration-500 text-slate-800 dark:text-slate-200;
     box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
   }
 

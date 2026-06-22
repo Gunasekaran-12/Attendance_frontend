@@ -62,6 +62,12 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, user: userData };
     } catch (error) {
+      if (!error.response) {
+        return {
+          success: false,
+          error: 'Cannot connect to server. Please check if the backend is running (mvn spring-boot:run).',
+        };
+      }
       const serverMessage = error.response?.data?.message || error.response?.data;
       return {
         success: false,
@@ -86,7 +92,7 @@ export const AuthProvider = ({ children }) => {
   const hasRole = (role) => user?.role === role;
 
   const isAdmin = () =>
-    ['SUPER_ADMIN', 'DISTRICT_ADMIN', 'BLOCK_ADMIN', 'SCHOOL_ADMIN'].includes(
+    ['ADMIN', 'DISTRICT_ADMIN', 'BLOCK_ADMIN', 'SCHOOL'].includes(
       user?.role
     );
 

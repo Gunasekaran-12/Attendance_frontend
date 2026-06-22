@@ -7,7 +7,7 @@ import { useToast } from '../context/ToastContext';
 import DashboardLayout from './layout/DashboardLayout';
 import { Save, CloudOff, CheckCircle2, User as UserIcon, Wifi, WifiOff, Hash, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
+import { savePendingAttendance } from '../utils/offlineSync';
 const AttendanceSheet = ({ className: propClassName }) => {
     const { user } = useAuth();
     const toast = useToast();
@@ -67,33 +67,37 @@ const AttendanceSheet = ({ className: propClassName }) => {
     const handleSubmit = async () => {
         setSubmitting(true);
         const date = new Date().toISOString().split('T')[0];
+        
+        // Use exact local ISO string per the new requirements
+        const nowIso = new Date().toISOString(); 
+        
         const payload = Object.entries(attendance).map(([studentId, status]) => ({
-            studentId,
+            studentId: parseInt(studentId),
             schoolId,
             date,
             status,
-            markedBy: user?.id,
-            timestamp: new Date().toISOString()
+            teacherId: user?.teacherId || user?.id,
+            markingMethod: 'MANUAL',
+            timestamp: nowIso
         }));
 
         try {
-            if (!isOnline) {
-                await localforage.setItem(`offline_attendance_${targetClass}_${date}`, payload);
-                toast.warning('Network unavailable. Secure vault storage engaged.');
+            if (!navigator.onLine) {
+                toast.warning('🔴 Offline — saving locally');
+                await savePendingAttendance(payload);
             } else {
-                toast.loading('Synchronizing attendance records...');
-                // Bulk submit (assuming backend supports it or doing sequentially with progress)
-                for (let i = 0; i < payload.length; i++) {
-                    await apiClient.post('/attendance', payload[i]);
-                    setSyncProgress(((i + 1) / payload.length) * 100);
-                }
+                toast.info('🟢 Online — sending attendance to server');
+                // Single bulk request
+                await apiClient.post('/attendance/sync', payload);
+                setSyncProgress(100);
                 toast.dismiss();
-                toast.success('All records successfully verified and uploaded');
+                toast.success('✔ Synced: All records uploaded successfully', { duration: 4000 });
             }
         } catch (error) {
             console.error("Sync failed", error);
-            await localforage.setItem(`fallback_attendance_${targetClass}_${date}`, payload);
-            toast.error('Server sync failed. Backup vault storage engaged.');
+            // If the API call fails despite being 'online', fall back to offline queue
+            toast.warning('🔴 Connection unstable — saving locally');
+            await savePendingAttendance(payload);
         } finally {
             setSubmitting(false);
             setSyncProgress(0);

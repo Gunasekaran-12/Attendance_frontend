@@ -21,6 +21,7 @@ const Login = () => {
   const [schools, setSchools] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingSchools, setLoadingSchools] = useState(false);
 
   const { login, user } = useAuth();
   const navigate = useNavigate();
@@ -31,11 +32,16 @@ const Login = () => {
   }, []);
 
   const loadSchools = async () => {
+    setLoadingSchools(true);
     try {
       const response = await geographyAPI.getSchools();
-      setSchools(response.data);
+      console.log("Loaded schools:", response.data);
+      setSchools(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error loading schools:', error);
+      toast.error('Failed to load schools list');
+    } finally {
+      setLoadingSchools(false);
     }
   };
 
@@ -46,10 +52,10 @@ const Login = () => {
     if (!user) return;
 
     const roleRoutes = {
-      SUPER_ADMIN: '/admin/dashboard',
+      ADMIN: '/admin/dashboard',
       DISTRICT_ADMIN: '/admin/dashboard',
       BLOCK_ADMIN: '/admin/dashboard',
-      SCHOOL_ADMIN: '/school/dashboard',
+      SCHOOL: '/school/dashboard',
       TEACHER: '/teacher/dashboard',
       STUDENT: '/student/dashboard',
       PARENT: '/student/dashboard',
@@ -104,19 +110,19 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fdfdfd] py-12 px-4 sm:px-6 lg:px-8 overflow-x-hidden relative">
+    <div className="min-h-screen flex items-center justify-center bg-[#fdfdfd] dark:bg-slate-950 py-12 px-4 sm:px-6 lg:px-8 overflow-x-hidden relative transition-colors duration-300">
       {/* Background Animations */}
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 0.4, scale: 1 }}
         transition={{ duration: 2, repeat: Infinity, repeatType: 'reverse' }}
-        className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-200 rounded-full blur-[120px] -z-10"
+        className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-200 dark:bg-indigo-900/40 rounded-full blur-[120px] -z-10"
       />
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 0.3, scale: 1 }}
         transition={{ duration: 3, delay: 1, repeat: Infinity, repeatType: 'reverse' }}
-        className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-200 rounded-full blur-[120px] -z-10"
+        className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-200 dark:bg-purple-900/40 rounded-full blur-[120px] -z-10"
       />
 
       <motion.div
@@ -125,26 +131,26 @@ const Login = () => {
         transition={{ duration: 0.8 }}
         className="w-full max-w-md"
       >
-        <div className="glass-card rounded-[2.5rem] p-8 md:p-10 shadow-2xl backdrop-blur-xl border border-white/20">
+        <div className="glass-card rounded-[2.5rem] p-8 md:p-10 shadow-2xl backdrop-blur-xl border border-white/20 dark:border-slate-700/30">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl shadow-xl mb-6">
               {isRegister ? <UserPlus className="w-8 h-8 text-white" /> : <LogIn className="w-8 h-8 text-white" />}
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">{isRegister ? 'Student Registration' : 'Welcome Back'}</h1>
-            <p className="text-slate-500 mt-2">Enterprise Attendance Management</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{isRegister ? 'Student Registration' : 'Welcome Back'}</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-2">Enterprise Attendance Management</p>
           </div>
 
-          <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-8">
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl mb-8">
             <button
               onClick={() => setIsRegister(false)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${!isRegister ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${!isRegister ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
             >
               Login
             </button>
             <button
               onClick={() => setIsRegister(true)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${isRegister ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${isRegister ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                 }`}
             >
               Student Register
@@ -163,36 +169,36 @@ const Login = () => {
                 >
                   <div className="grid grid-cols-1 gap-4">
                     <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
                       <input
                         type="text"
                         placeholder="Full Name"
                         value={regData.name}
                         onChange={(e) => setRegData({ ...regData, name: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                         required
                       />
                     </div>
                     <div className="relative">
-                      <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                      <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
                       <input
                         type="text"
                         placeholder="Roll Number"
                         value={regData.rollNumber}
                         onChange={(e) => setRegData({ ...regData, rollNumber: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                         required
                       />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="relative">
-                        <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                        <GraduationCap className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
                         <input
                           type="text"
                           placeholder="Class"
                           value={regData.className}
                           onChange={(e) => setRegData({ ...regData, className: e.target.value })}
-                          className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                          className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                           required
                         />
                       </div>
@@ -201,41 +207,52 @@ const Login = () => {
                         placeholder="Section"
                         value={regData.section}
                         onChange={(e) => setRegData({ ...regData, section: e.target.value })}
-                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                        className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                         required
                       />
                     </div>
                     <div className="relative">
-                      <School className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                      <School className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
                       <select
                         value={regData.school.id}
                         onChange={(e) => setRegData({ ...regData, school: { id: e.target.value } })}
-                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none appearance-none transition-all cursor-pointer"
+                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 focus:ring-4 focus:ring-indigo-500/10 outline-none appearance-none transition-all cursor-pointer disabled:bg-slate-50 dark:disabled:bg-slate-800 disabled:cursor-not-allowed"
                         required
+                        disabled={loadingSchools}
                       >
-                        <option value="">Select Your School</option>
-                        {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        <option value="">
+                          {loadingSchools ? 'Loading schools...' : 'Select Your School'}
+                        </option>
+                        {schools && schools.length > 0 ? (
+                          schools.map(s => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))
+                        ) : !loadingSchools ? (
+                          <option disabled>No schools available</option>
+                        ) : null}
                       </select>
                     </div>
                     <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
                       <input
                         type="tel"
                         placeholder="Parent Phone"
                         value={regData.parentPhone}
                         onChange={(e) => setRegData({ ...regData, parentPhone: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                         required
                       />
                     </div>
                     <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
                       <input
                         type="password"
                         placeholder="Create Password"
                         value={regData.password}
                         onChange={(e) => setRegData({ ...regData, password: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                        className="w-full pl-12 pr-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                         required
                       />
                     </div>
@@ -251,24 +268,24 @@ const Login = () => {
                 >
                   <div className="space-y-4">
                     <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                       <input
                         type="text"
                         placeholder="Username"
                         value={credentials.username}
                         onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                         required
                       />
                     </div>
                     <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
                       <input
                         type="password"
                         placeholder="Password"
                         value={credentials.password}
                         onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                        className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/50 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
                         required
                       />
                     </div>
@@ -281,7 +298,7 @@ const Login = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-red-50 text-red-600 px-4 py-3 rounded-2xl text-sm font-medium border border-red-100 flex items-center gap-2"
+                className="bg-red-50 dark:bg-rose-950/30 text-red-600 dark:text-rose-400 px-4 py-3 rounded-2xl text-sm font-medium border border-red-100 dark:border-rose-900/40 flex items-center gap-2"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 {error}

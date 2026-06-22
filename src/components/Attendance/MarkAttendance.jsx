@@ -4,6 +4,13 @@ import { apiClient } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import DashboardLayout from '../layout/DashboardLayout';
+import {
+    saveOfflineStudents,
+    getOfflineStudents,
+    savePendingAttendance,
+    syncPendingAttendance,
+    getPendingAttendance
+} from '../../utils/offlineSync';
 import { CheckCircle2, XCircle, Clock, User as UserIcon, Calendar, Search, Save, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -27,6 +34,7 @@ const MarkAttendance = () => {
         try {
             const response = await apiClient.get(`/students/school/${schoolId}`);
             setStudents(response.data);
+            saveOfflineStudents(schoolId, response.data);
 
             // Initialize attendance state
             const initialData = {};
@@ -35,8 +43,18 @@ const MarkAttendance = () => {
 
             toast.success('Student roster synchronized');
         } catch (error) {
-            console.error("Error fetching students", error);
-            toast.error('Failed to load students');
+            console.error("Error fetching students from server", error);
+            // Fallback to offline cache
+            const offlineStudents = getOfflineStudents(schoolId);
+            if (offlineStudents && offlineStudents.length > 0) {
+                setStudents(offlineStudents);
+                const initialData = {};
+                offlineStudents.forEach(s => initialData[s.id] = 'PRESENT');
+                setAttendanceData(initialData);
+                toast.success('Loaded student roster from offline cache', { icon: '🔄' });
+            } else {
+                toast.error('Failed to load students and no offline data available');
+            }
         } finally {
             setLoading(false);
         }
@@ -48,11 +66,11 @@ const MarkAttendance = () => {
 
     const handleSubmit = async () => {
         setSubmitting(true);
-        toast.loading('Securing attendance records...');
+        const toastId = toast.loading('Securing attendance records locally...');
         try {
             const date = new Date().toISOString().split('T')[0];
-            const promises = Object.keys(attendanceData).map(studentId => {
-                const payload = {
+            const recordsToSave = Object.keys(attendanceData).map(studentId => {
+                return {
                     studentId,
                     schoolId,
                     date,
@@ -60,16 +78,30 @@ const MarkAttendance = () => {
                     markedBy: user?.id,
                     timestamp: new Date().toISOString()
                 };
-                return apiClient.post('/attendance', payload);
             });
 
-            await Promise.all(promises);
-            toast.dismiss();
-            toast.success('Attendance records successfully committed');
+            // Save records locally as PENDING
+            await savePendingAttendance(recordsToSave);
+
+            toast.dismiss(toastId);
+            toast.success('Attendance Recorded Successfully');
+
+            // Re-sync background queue
+            syncPendingAttendance().then(async () => {
+                // Determine if there are still pending records 
+                const stillPending = await getPendingAttendance();
+                if (navigator.onLine && stillPending.length === 0) {
+                    toast.success('Attendance Data Successfully Synced to Cloud');
+                } else if (!navigator.onLine) {
+                    toast.warning('No Internet Connection – Attendance Data Stored Locally', { duration: 5000 });
+                }
+            });
+
+            // Reset UI slightly or keep it. For now, let's keep it on screen
         } catch (error) {
             console.error(error);
-            toast.dismiss();
-            toast.error('System failed to process records');
+            toast.dismiss(toastId);
+            toast.error('System failed to save records');
         } finally {
             setSubmitting(false);
         }
